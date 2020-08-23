@@ -1,6 +1,18 @@
 class User < ApplicationRecord
+
   has_many :microposts
   has_many :microposts, dependent: :destroy
+  #we explicit says that our foreign_key is follower_id (ex: has_many user_posts, foreign_key: user_id)
+  has_many :active_relationships, class_name: "Relationship",
+                                  foreign_key: "follower_id",
+                                  dependent: :destroy
+  #find the people's i'm following through active_relationships, followed_id. (ex has_many: posts, thought: user_posts)
+  has_many :following, through: :active_relationships, source: :followed #here we write followed to find the followed_id in the join table
+  #the other side of the has_many
+  has_many :passive_relationships, class_name: "Relationship",
+                                  foreign_key: "followed_id",
+                                  dependent: :destroy
+  has_many :followers, through: :passive_relationships, source: :follower
   attr_accessor :remember_token,:activation_token,:reset_token
   before_save :downcase_email
   before_create :create_activation_digest
@@ -15,6 +27,19 @@ class User < ApplicationRecord
 
   def feed
     microposts
+  end
+
+  # 关注另一个用户
+  def follow(other_user)
+    following << other_user
+  end
+  # 取消关注另一个用户
+  def unfollow(other_user)
+    following.delete(other_user)
+  end
+  # 如果当前用户关注了指定的用户，返回 true
+  def following?(other_user)
+    following.include?(other_user)
   end
 
   def self.digest(string)
